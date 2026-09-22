@@ -431,6 +431,27 @@ public class BlabController {
 			sort = "blab_name ASC";
 		}
 
+		// Validate sort parameter to prevent SQL injection
+		String[] sortParts = sort.trim().split("\\s+");
+		if (sortParts.length != 2) {
+			throw new IllegalArgumentException("Invalid sort parameter");
+		}
+		String sortColumn = sortParts[0];
+		String sortDirection = sortParts[1];
+
+		if (sortColumn == null || !sortColumn.matches("^[a-zA-Z0-9_]+$")) {
+			throw new IllegalArgumentException("Invalid sort column");
+		}
+		if (sortDirection == null) {
+			sortDirection = "ASC";
+		} else {
+			String dir = sortDirection.trim().toUpperCase(java.util.Locale.ROOT);
+			if (!dir.equals("ASC") && !dir.equals("DESC")) {
+				throw new IllegalArgumentException("Invalid ORDER BY direction");
+			}
+			sortDirection = dir;
+		}
+
 		String nextView = Utils.redirect("feed");
 		logger.info("Entering showBlabbers");
 
@@ -451,7 +472,7 @@ public class BlabController {
 				+ " SUM(if(listeners.listener=?, 1, 0)) as listeners,"
 				+ " SUM(if(listeners.status='Active',1,0)) as listening"
 				+ " FROM users LEFT JOIN listeners ON users.username = listeners.blabber"
-				+ " WHERE users.username NOT IN (\"admin\",?)" + " GROUP BY users.username" + " ORDER BY " + sort + ";";
+				+ " WHERE users.username NOT IN (\"admin\",?)" + " GROUP BY users.username" + " ORDER BY " + sortColumn + " " + sortDirection + ";";
 
 		try {
 			logger.info("Getting Database connection");
